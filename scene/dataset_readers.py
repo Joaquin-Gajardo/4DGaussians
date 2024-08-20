@@ -383,6 +383,7 @@ def readHyperDataInfos(datadir,use_bg_points,eval):
 
 
     ply_path = os.path.join(datadir, "points3D_downsample2.ply")
+    #ply_path = os.path.join(datadir, "points3D_downsample3.ply") # not precomputed (if it exists)
     pcd = fetchPly(ply_path)
     xyz = np.array(pcd.points)
 

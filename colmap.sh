@@ -1,4 +1,4 @@
-
+# From https://github.com/hustvl/4DGaussians
 
 workdir=$1
 datatype=$2 # blender, hypernerf, llff

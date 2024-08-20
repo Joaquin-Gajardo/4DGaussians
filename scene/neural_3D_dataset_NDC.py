@@ -368,8 +368,11 @@ class Neural3D_NDC_Dataset(Dataset):
         return len(self.image_paths)
     def __getitem__(self,index):
         img = Image.open(self.image_paths[index])
-        img = img.resize(self.img_wh, Image.LANCZOS)
-
+        try:
+            img = img.resize(self.img_wh, Image.LANCZOS)
+        except OSError:
+            print(f"Skipping corrupted image at index {index}")
+            return None
         img = self.transform(img)
         return img, self.image_poses[index], self.image_times[index]
     def load_pose(self,index):
