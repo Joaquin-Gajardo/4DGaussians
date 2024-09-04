@@ -21,11 +21,18 @@ class FourDGSdataset(Dataset):
 
         if self.dataset_type != "PanopticSports":
             try:
-                image, w2c, time = self.dataset[index]
-                R,T = w2c
-                FovX = focal2fov(self.dataset.focal[0], image.shape[2])
-                FovY = focal2fov(self.dataset.focal[0], image.shape[1])
-                mask=None
+                image, pose, time = self.dataset[index]
+                if self.dataset_type == "WAT":
+                    R = pose[:3, :3].numpy()
+                    T = pose[:3, 3].numpy()
+                    FovX = focal2fov(self.dataset.K[0, 0].item(), self.dataset.img_wh[0])
+                    FovY = focal2fov(self.dataset.K[1, 1].item(), self.dataset.img_wh[1])
+                    time = time # NOTE: test if need .numpy()?
+                else:
+                    R,T = pose
+                    FovX = focal2fov(self.dataset.focal[0], image.shape[2])
+                    FovY = focal2fov(self.dataset.focal[0], image.shape[1])
+                mask = None
             except:
                 caminfo = self.dataset[index]
                 image = caminfo.image
@@ -36,9 +43,11 @@ class FourDGSdataset(Dataset):
                 time = caminfo.time
     
                 mask = caminfo.mask
-            return Camera(colmap_id=index,R=R,T=T,FoVx=FovX,FoVy=FovY,image=image,gt_alpha_mask=None,
-                              image_name=f"{index}",uid=index,data_device=torch.device("cuda"),time=time,
-                              mask=mask)
+            camera = Camera(colmap_id=index,R=R,T=T,FoVx=FovX,FoVy=FovY,image=image,gt_alpha_mask=None,
+                            image_name=f"{index}",uid=index,data_device=torch.device("cuda"), time=time,
+                            mask=mask)
+            print(f"FourDGSdataset: Image shape at index {index}: {image.shape}, Range: [{image.min().item():.2f}, {image.max().item():.2f}], T: {T}")
+            return camera
         else:
             return self.dataset[index]
     def __len__(self):

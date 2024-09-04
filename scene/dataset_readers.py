@@ -18,6 +18,7 @@ from typing import NamedTuple
 from scene.colmap_loader import read_extrinsics_text, read_intrinsics_text, qvec2rotmat, \
     read_extrinsics_binary, read_intrinsics_binary, read_points3D_binary, read_points3D_text
 from scene.hyper_loader import Load_hyper_data, format_hyper_data
+from scene.WAT_dataset import ColmapDataset_NGPA
 import torchvision.transforms as transforms
 import copy
 from utils.graphics_utils import getWorld2View2, focal2fov, fov2focal
@@ -30,6 +31,8 @@ from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
 from utils.general_utils import PILtoTorch
 from tqdm import tqdm
+
+
 class CameraInfo(NamedTuple):
     uid: int
     R: np.array
@@ -633,11 +636,111 @@ def readMultipleViewinfos(datadir,llffhold=8):
                            ply_path=ply_path)
     return scene_info
 
+def format_WAT_infos(dataset):
+    cameras = []
+
+    for idx in tqdm(range(len(dataset))):
+        img, pose, time = dataset[idx]
+        
+        # Extract image path and name from dataset
+        image_path = dataset.img_paths[idx]
+        image_name = os.path.basename(image_path)
+        
+        # Extract R and T from the pose
+        pose = pose.numpy()
+        R = pose[:3, :3].T  # Transpose to convert from world-to-camera to camera-to-world
+        T = -R @ pose[:3, 3]  # Convert position to translation
+        
+        # Calculate FovX and FovY
+        fx, fy = dataset.K[0, 0].item(), dataset.K[1, 1].item()
+        FovX = focal2fov(fx, dataset.img_wh[0])
+        FovY = focal2fov(fy, dataset.img_wh[1])
+        
+        # Create CameraInfo object
+        camera_info = CameraInfo(
+            uid=idx,
+            R=R,
+            T=T,
+            FovY=FovY,
+            FovX=FovX,
+            image=img,  # This is the actual image tensor
+            image_path=image_path,
+            image_name=image_name,
+            width=dataset.img_wh[0],
+            height=dataset.img_wh[1],
+            time=time.item(),  # Convert from tensor to scalar
+            mask=None  # Set to None as masks are not available in the current dataset
+        )
+        
+        cameras.append(camera_info)
+
+    return cameras
+
+def readWATInfo(datadir):
+    # Create train and test datasets
+    train_dataset = ColmapDataset_NGPA(
+        root_dir=datadir,
+        split='train',
+        downsample=1.0,
+    )
+    test_dataset = ColmapDataset_NGPA(
+        root_dir=datadir,
+        split='test',
+        downsample=1.0,
+    )
+
+    # Format the camera information
+    train_cam_infos = format_WAT_infos(train_dataset)
+    test_cam_infos = format_WAT_infos(test_dataset)
+
+    # Get NeRF++ normalization
+    nerf_normalization = getNerfppNorm(train_cam_infos)
+
+    # Check if PLY file exists, if not, create it
+    ply_path = os.path.join(datadir, "sparse/0/points3D.ply")
+    if not os.path.exists(ply_path):
+        print("Converting point3d data to .ply, will happen only the first time you open the scene.")
+        # Use the points3d data from the dataset
+        xyz = train_dataset.pts3d
+        # Assuming RGB values are stored in the dataset, otherwise use a default color
+        if hasattr(train_dataset, 'pts3d_rgb'):
+            rgb = train_dataset.pts3d_rgb
+        else:
+            rgb = np.zeros_like(xyz) # Default color is black
+        storePly(ply_path, xyz, rgb)
+
+    # Fetch the point cloud
+    try:
+        pcd = fetchPly(ply_path)
+    except:
+        print("Failed to fetch PLY file. Using points from dataset.")
+        pcd = train_dataset.pts3d
+        
+    print("Number of points:", pcd.points.shape[0])
+
+    # Calculate max_time
+    all_times = np.concatenate([train_dataset.ts.numpy(), test_dataset.ts.numpy()])
+    max_time = np.max(all_times)
+
+    # Create SceneInfo object
+    scene_info = SceneInfo(
+        point_cloud=pcd,
+        train_cameras=train_dataset,
+        test_cameras=test_dataset,
+        video_cameras=test_cam_infos,
+        nerf_normalization=nerf_normalization,
+        ply_path=ply_path,
+        maxtime=max_time
+    )
+    return scene_info
+
+
 sceneLoadTypeCallbacks = {
     "Colmap": readColmapSceneInfo,
     "Blender" : readNerfSyntheticInfo,
     "dynerf" : readdynerfInfo,
     "nerfies": readHyperDataInfos,  # NeRFies & HyperNeRF dataset proposed by [https://github.com/google/hypernerf/releases/tag/v0.1]
     "PanopticSports" : readPanopticSportsinfos,
-    "MultipleView": readMultipleViewinfos
+    "MultipleView": readMultipleViewinfos,
+    "WAT": readWATInfo,
 }
