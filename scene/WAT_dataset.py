@@ -363,6 +363,7 @@ class ColmapDataset_NGPA(Dataset):
     def __getitem__(self, idx):
         img = self.read_image(self.img_paths[idx])
         #img = torch.tensor(np.array(img)) # (H, W, 3), dtype=torch.uint8
+        #img = img.resize((int(self.img_wh[0]/2), int(self.img_wh[1]/2)))
         img = self.transform(img)
         return img, self.poses[idx], self.ts[idx]
     

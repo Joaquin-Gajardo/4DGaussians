@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 run_commands() {
     local scene=$1
@@ -6,9 +7,10 @@ run_commands() {
     local port=$3
 
     export CUDA_VISIBLE_DEVICES=$gpu
-    python train.py -s ../../datasets/WAT/$scene --port $port --expname "../../../output/WAT/$scene" --configs arguments/WAT/default.py
-    python render.py --model_path "../../output/WAT/$scene" --skip_train --configs arguments/WAT/default.py
-    python metrics.py --model_path "../../output/WAT/$scene"
+    local exp="def4DGS"
+    python train.py -s ../../datasets/WAT/$scene --port $port --expname "../../../output/WAT/$exp/$scene" --configs arguments/WAT/default.py
+    python render.py --model_path "../../output/WAT/$exp/$scene" --skip_train --configs arguments/WAT/default.py
+    python metrics.py --model_path "../../output/WAT/$exp/$scene"
 }
 
 run_commands "breville" 0 6016 &
@@ -35,5 +37,7 @@ run_commands "spa" 0 6016 &
 run_commands "street" 1 6017 &
 
 wait
+
+run_commands "dyson" 0 6016
 
 echo "All jobs (training, rendering, and metrics) completed."

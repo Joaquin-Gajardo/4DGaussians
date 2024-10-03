@@ -698,23 +698,28 @@ def readWATInfo(datadir):
 
     # Check if PLY file exists, if not, create it
     ply_path = os.path.join(datadir, "sparse/0/points3D.ply")
-    if not os.path.exists(ply_path):
-        print("Converting point3d data to .ply, will happen only the first time you open the scene.")
-        # Use the points3d data from the dataset
-        xyz = train_dataset.pts3d
-        # Assuming RGB values are stored in the dataset, otherwise use a default color
-        if hasattr(train_dataset, 'pts3d_rgb'):
-            rgb = train_dataset.pts3d_rgb
-        else:
-            rgb = np.zeros_like(xyz) # Default color is black
-        storePly(ply_path, xyz, rgb)
+
+    #ply_path = os.path.join(datadir, "dense_undistorted/points3D_downsample.ply")
+    #ply_path = os.path.join(datadir, "dense_undistorted/fused.ply")
+    
+    # if not os.path.exists(ply_path):
+    #     print("Converting point3d data to .ply, will happen only the first time you open the scene.")
+    #     # Use the points3d data from the dataset
+    #     xyz = train_dataset.pts3d
+    #     # Assuming RGB values are stored in the dataset, otherwise use a default color
+    #     if hasattr(train_dataset, 'pts3d_rgb'):
+    #         rgb = train_dataset.pts3d_rgb
+    #     else:
+    #         rgb = np.zeros_like(xyz) # Default color is black
+    #     storePly(ply_path, xyz, rgb)
 
     # Fetch the point cloud
     try:
         pcd = fetchPly(ply_path)
+        print(f"Successfully fetched PLY file {ply_path}.")
     except:
-        print("Failed to fetch PLY file. Using points from dataset.")
-        pcd = train_dataset.pts3d
+        pcd = None
+        raise f"Failed to fetch PLY file {ply_path}."
         
     print("Number of points:", pcd.points.shape[0])
 

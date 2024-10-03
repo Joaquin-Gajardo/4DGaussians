@@ -33,7 +33,7 @@ def summarize_results(base_folder):
                 print(f"Warning: No JSON file found for scene {scene_folder}")
 
     # Create a DataFrame
-    df = pd.DataFrame(results)
+    df = pd.DataFrame(results).sort_values('Scene')
 
     # Calculate overall mean
     mean_row = pd.DataFrame({
@@ -51,9 +51,10 @@ def summarize_results(base_folder):
 
     return df
 
-base_folder = "../../output/WAT"
+method="def4DGS-3"
+base_folder = f"../../output/WAT/{method}"
 summary_table = summarize_results(base_folder)
 
 print(summary_table.to_string())
 
-summary_table.to_csv("WAT_4DGS_results_summary.csv")
+summary_table.to_csv(f"WAT_{method}_results_summary.csv")
