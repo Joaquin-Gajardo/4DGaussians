@@ -96,6 +96,14 @@ class Scene:
         else:
             self.gaussians.create_from_pcd(scene_info.point_cloud, self.cameras_extent, self.maxtime)
 
+        # Save test images
+        test_cameras_names_path = os.path.join(self.model_path, 'test_cameras_names.txt')
+        test_cameras_names = [path.split('/')[-1] for path in scene_info.test_cameras.img_paths]
+        if not os.path.exists(test_cameras_names_path):
+            with open(test_cameras_names_path, 'w') as f:
+                for cam in test_cameras_names:
+                    f.write(f"{cam}\n")
+
     def save(self, iteration, stage):
         if stage == "coarse":
             point_cloud_path = os.path.join(self.model_path, "point_cloud/coarse_iteration_{}".format(iteration))

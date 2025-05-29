@@ -277,7 +277,16 @@ class ColmapDataset_NGPA(Dataset):
             for name in sorted(img_names)
         ]
         # get the task id
-        task_ids, test_img_ids = name_to_task(img_paths)
+        #task_ids, test_img_ids = name_to_task(img_paths)
+        subfolders = sorted(set([path.split('/')[-2] for path in img_paths]))
+        timestep_mapping = {subfolder: idx for idx, subfolder in enumerate(subfolders)}
+        task_ids = [timestep_mapping[path.split('/')[-2]] for path in img_paths]
+
+        test_img_ids = [idx for idx, path in enumerate(img_paths) if idx % 8 == 0]
+        
+        # # For debugging
+        # train_img_paths = [path for idx, path in enumerate(img_paths) if idx % 8 != 0]
+        # test_img_paths = [path for idx, path in enumerate(img_paths) if idx % 8 == 0]
 
         w2c_mats = []
         bottom = np.array([[0, 0, 0, 1.]])
